@@ -39,6 +39,9 @@ class Colors:
     WHITE = "\033[97m"
     BOLD = "\033[1m"
     RESET = "\033[0m"
+    # Bright blue/cyan for Assetnote branding
+    BRIGHT_BLUE = "\033[94m"
+    BRIGHT_CYAN = "\033[96m"
 
 
 def colorize(text: str, color: str) -> str:
@@ -48,9 +51,49 @@ def colorize(text: str, color: str) -> str:
 
 def print_banner():
     """Print the tool banner."""
-    banner = f"""
-{Colors.CYAN}{Colors.BOLD}brought to you by assetnote{Colors.RESET}
-"""
+    assetnote_art = (
+        "                        _               _       \n"
+        "     /\\                | |             | |      \n"
+        "    /  \\   ___ ___  ___| |_ _ __   ___ | |_ ___ \n"
+        "   / /\\ \\ / __/ __|/ _ \\ __| '_ \\ / _ \\| __/ _ \\\n"
+        "  / ____ \\\\__ \\__ \\  __/ |_| | | | (_) | ||  __/\n"
+        " /_/    \\_\\___/___/\\___|\\__|_| |_|\\___/ \\__\\___|\n"
+        "                                                \n"
+        "                                                \n"
+    )
+    
+    kangaroo = (
+        "                                      :e\n"
+        "                                    'M$\\\n"
+        "                                   sf$$br\n"
+        "                                 J\\J\\J$L$L\n"
+        "                               :d  )fM$$$$$r\n"
+        "                          ..P*\\ .4MJP   '*\\\n"
+        "                 sed\"\"\"\"\"\" ser d$$$F\n"
+        "             .M\\  ..JM$$$B$$$$BJ$MR  ...\n"
+        "            dF  nMMM$$$R$$$$$$$h\"$ks$$\"$$r\n"
+        "          J\\.. .MMM8$$$$$LM$P\\..'**\\    *\\\n"
+        "         d :d$r \"M$$$$br'$M\\d$R\n"
+        "        J\\MM\\ *L   *M$B8MM$B.**\n"
+        "       :fd$>  :fhr 'MRM$$M$$\"\n"
+        "       MJ$>    '5J5..M8$$>\n"
+        "      :fMM     d$Fd$$R$$F\n"
+        "      4M$P .$$*.J*$$**\n"
+        "      M4$> '$>dRdF\n"
+        "      MMM\\   *L*B.         \n"
+        "     :$$F     ?k\"Re\n"
+        "   .$$P\\        **'$$B...\n"
+        ":e$F\"               '\"\"\"\"\n"
+    )
+    
+    banner = f"""{Colors.CYAN}{assetnote_art}
+  React2Shell Scanner | RSC/Next.js RCE Detection
+  CVE-2025-55182 & CVE-2025-66478
+  
+{kangaroo}
+{Colors.BRIGHT_CYAN}Assetnote Security Research{Colors.CYAN}
+    
+{Colors.RESET}"""
     print(banner)
 
 
@@ -82,35 +125,7 @@ def build_payload() -> tuple[str, str]:
     return body, content_type
 
 
-def resolve_redirects(url: str, timeout: int, verify_ssl: bool, max_redirects: int = 10) -> str:
-    """Follow redirects using HEAD requests to find the final URL."""
-    current_url = url
-    for _ in range(max_redirects):
-        try:
-            response = requests.head(
-                current_url,
-                timeout=timeout,
-                verify=verify_ssl,
-                allow_redirects=False
-            )
-            if response.status_code in (301, 302, 303, 307, 308):
-                location = response.headers.get("Location")
-                if location:
-                    if location.startswith("/"):
-                        parsed = urlparse(current_url)
-                        current_url = f"{parsed.scheme}://{parsed.netloc}{location}"
-                    else:
-                        current_url = location
-                else:
-                    break
-            else:
-                break
-        except RequestException:
-            break
-    return current_url
-
-
-def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True, follow_redirects: bool = True) -> dict:
+def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True) -> dict:
     """
     Check if a host is vulnerable to CVE-2025-55182/CVE-2025-66478.
 
@@ -129,7 +144,6 @@ def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True, f
         "error": None,
         "request": None,
         "response": None,
-        "final_url": None,
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
@@ -137,17 +151,6 @@ def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True, f
     if not host:
         result["error"] = "Invalid or empty host"
         return result
-
-    target_url = f"{host}/"
-
-    # Follow redirects to find final destination
-    if follow_redirects:
-        try:
-            target_url = resolve_redirects(target_url, timeout, verify_ssl)
-        except Exception:
-            pass  # Continue with original URL if redirect resolution fails
-
-    result["final_url"] = target_url
 
     body, content_type = build_payload()
 
@@ -160,8 +163,8 @@ def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True, f
         "X-Nextjs-Html-Request-Id": "SSTMXm7OJ_g0Ncx6jpQt9",
     }
 
-    parsed = urlparse(target_url)
-    request_str = f"POST {parsed.path or '/'} HTTP/1.1\r\n"
+    parsed = urlparse(host)
+    request_str = f"POST / HTTP/1.1\r\n"
     request_str += f"Host: {parsed.netloc}\r\n"
     for k, v in headers.items():
         request_str += f"{k}: {v}\r\n"
@@ -171,7 +174,7 @@ def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True, f
 
     try:
         response = requests.post(
-            target_url,
+            f"{host}/",
             headers=headers,
             data=body,
             timeout=timeout,
@@ -247,34 +250,43 @@ def save_results(results: list[dict], output_file: str, vulnerable_only: bool = 
 
 def print_result(result: dict, verbose: bool = False):
     host = result["host"]
-    final_url = result.get("final_url")
-    redirected = final_url and final_url != f"{normalize_host(host)}/"
 
     if result["vulnerable"] is True:
-        status = colorize("[VULNERABLE]", Colors.RED + Colors.BOLD)
-        print(f"{status} {colorize(host, Colors.WHITE)} - Status: {result['status_code']}")
-        if redirected:
-            print(f"  -> Redirected to: {final_url}")
+        status = colorize("[vulnerable]", Colors.RED + Colors.BOLD)
+        print(f"  {status}  {colorize(host, Colors.WHITE + Colors.BOLD)} - status: {Colors.RED}{Colors.BOLD}{result['status_code']}{Colors.RESET}")
     elif result["vulnerable"] is False:
-        status = colorize("[NOT VULNERABLE]", Colors.GREEN)
-        print(f"{status} {host} - Status: {result['status_code']}")
-        if redirected and verbose:
-            print(f"  -> Redirected to: {final_url}")
+        status = colorize("[not vulnerable]", Colors.GREEN)
+        print(f"  {status}  {colorize(host, Colors.WHITE)} - status: {Colors.GREEN}{result['status_code']}{Colors.RESET}")
     else:
-        status = colorize("[ERROR]", Colors.YELLOW)
+        status = colorize("[error]", Colors.YELLOW)
         error_msg = result.get("error", "Unknown error")
-        print(f"{status} {host} - {error_msg}")
+        print(f"  {status}  {colorize(host, Colors.WHITE)} - {Colors.YELLOW}{error_msg}{Colors.RESET}")
 
     if verbose and result["vulnerable"]:
-        print(colorize("  Response snippet:", Colors.CYAN))
+        print(f"  {Colors.CYAN}Response snippet:{Colors.RESET}")
         if result.get("response"):
             lines = result["response"].split("\r\n")[:10]
             for line in lines:
                 print(f"    {line}")
 
 
+class BannerArgumentParser(argparse.ArgumentParser):
+    """Custom ArgumentParser that shows banner before errors/help."""
+    def error(self, message):
+        # Show banner before error message (when no args provided)
+        print_banner()
+        sys.stdout.flush()
+        super().error(message)
+    
+    def print_help(self, file=None):
+        # Show banner before help
+        print_banner()
+        sys.stdout.flush()
+        super().print_help(file)
+
+
 def main():
-    parser = argparse.ArgumentParser(
+    parser = BannerArgumentParser(
         description="React2Shell Scanner",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
@@ -358,9 +370,6 @@ Examples:
         Colors.BOLD = ""
         Colors.RESET = ""
 
-    if not args.quiet:
-        print_banner()
-
     if args.url:
         hosts = [args.url]
     else:
@@ -371,11 +380,12 @@ Examples:
         sys.exit(1)
 
     if not args.quiet:
-        print(colorize(f"[*] Loaded {len(hosts)} host(s) to scan", Colors.CYAN))
-        print(colorize(f"[*] Using {args.threads} thread(s)", Colors.CYAN))
-        print(colorize(f"[*] Timeout: {args.timeout}s", Colors.CYAN))
+        print(f"{Colors.CYAN}Configuration:{Colors.RESET}")
+        print(f"  hosts: {Colors.BOLD}{len(hosts)}{Colors.RESET}")
+        print(f"  threads: {Colors.BOLD}{args.threads}{Colors.RESET}")
+        print(f"  timeout: {Colors.BOLD}{args.timeout}s{Colors.RESET}")
         if args.insecure:
-            print(colorize("[!] SSL verification disabled", Colors.YELLOW))
+            print(f"  ssl verification: {Colors.YELLOW}{Colors.BOLD}disabled{Colors.RESET}")
         print()
 
     results = []
@@ -404,7 +414,7 @@ Examples:
 
             with tqdm(
                 total=len(hosts),
-                desc=colorize("Scanning", Colors.CYAN),
+                desc=colorize("Scanning", Colors.CYAN + Colors.BOLD),
                 unit="host",
                 ncols=80,
                 disable=args.quiet
@@ -430,19 +440,20 @@ Examples:
 
     if not args.quiet:
         print()
-        print(colorize("=" * 60, Colors.CYAN))
-        print(colorize("SCAN SUMMARY", Colors.BOLD))
-        print(colorize("=" * 60, Colors.CYAN))
-        print(f"  Total hosts scanned: {len(hosts)}")
-
+        print(f"{Colors.CYAN}Summary:{Colors.RESET}")
+        print(f"  total scanned: {Colors.BOLD}{len(hosts)}{Colors.RESET}")
+        
         if vulnerable_count > 0:
-            print(f"  {colorize(f'Vulnerable: {vulnerable_count}', Colors.RED + Colors.BOLD)}")
+            print(f"  vulnerable: {Colors.RED}{Colors.BOLD}{vulnerable_count}{Colors.RESET}")
         else:
-            print(f"  Vulnerable: {vulnerable_count}")
+            print(f"  vulnerable: {Colors.BOLD}{vulnerable_count}{Colors.RESET}")
 
-        print(f"  Not vulnerable: {len(hosts) - vulnerable_count - error_count}")
-        print(f"  Errors: {error_count}")
-        print(colorize("=" * 60, Colors.CYAN))
+        print(f"  not vulnerable: {Colors.BOLD}{len(hosts) - vulnerable_count - error_count}{Colors.RESET}")
+        
+        if error_count > 0:
+            print(f"  errors: {Colors.YELLOW}{Colors.BOLD}{error_count}{Colors.RESET}")
+        else:
+            print(f"  errors: {Colors.BOLD}{error_count}{Colors.RESET}")
 
     if args.output:
         save_results(results, args.output, vulnerable_only=not args.all_results)
