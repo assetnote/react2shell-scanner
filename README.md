@@ -53,6 +53,7 @@ python3 scanner.py -l hosts.txt -t 20 -o results.json
 -v, --verbose     Show response details for vulnerable hosts
 -q, --quiet       Only output vulnerable hosts
 --no-color        Disable colored output
+--user-agent      Customize your User-Agent
 ```
 
 ## Output
