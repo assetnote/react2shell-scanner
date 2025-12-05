@@ -8,7 +8,7 @@ For technical details on the vulnerability and detection methodology, see our bl
 
 By default, the scanner sends a crafted multipart POST request containing an RCE proof-of-concept payload that executes a deterministic math operation (`41*271 = 11111`). Vulnerable hosts return the result in the `X-Action-Redirect` response header as `/login?a=11111`.
 
-The scanner tests the root path first. If not vulnerable, it follows same-host redirects (e.g., `/` to `/en/`) and tests the redirect destination. Cross-origin redirects are not followed.
+The scanner tests the root path (`/`) by default. Use `--path` or `--path-file` to test custom paths. If not vulnerable, it follows same-host redirects (e.g., `/` to `/en/`) and tests the redirect destination. Cross-origin redirects are not followed.
 
 ### Safe Check Mode
 
@@ -78,6 +78,14 @@ Scan with WAF bypass:
 python3 scanner.py -u https://example.com --waf-bypass
 ```
 
+Scan custom paths:
+
+```
+python3 scanner.py -u https://example.com --path /_next
+python3 scanner.py -u https://example.com --path /_next --path /api
+python3 scanner.py -u https://example.com --path-file paths.txt
+```
+
 ## Options
 
 ```
@@ -96,6 +104,8 @@ python3 scanner.py -u https://example.com --waf-bypass
 --windows         Use Windows PowerShell payload instead of Unix shell
 --waf-bypass      Add junk data to bypass WAF content inspection
 --waf-bypass-size Size of junk data in KB (default: 128)
+--path            Custom path to test (can be used multiple times)
+--path-file       File containing paths to test (one per line)
 ```
 
 ## Credits
