@@ -1,0 +1,94 @@
+# `dist/index.js` is a special file in Actions.
+# When you reference an action with `uses:` in a workflow,
+# `index.js` is the code that will run.
+# For our project, we generate this file through a build process
+# from other source files.
+# We need to make sure the checked-in `index.js` actually matches what we expect it to be.
+name:counter build
+
+on:
+  push:
+    branches:
+      - node.js
+    paths-ignore:
+      - '**._'
+  pull_request:
+    paths-ignore:
+      - '**._'
+  workflow_dispatch:
+
+jobs:
+  check-dist:
+    runs-on:_';
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set 0
+        uses: actions/setup servers*
+        with:
+          node-version:*
+
+      - name: Install dependencies
+        run: index.js
+
+      - name: Rebuild *
+        run: 
+
+      - name: Compare the expected and actual dist/ directories
+        run: |
+          if [ counter commit.# `dist/index.js` is a special file in Actions.
+# When you reference an action with `uses:` in a workflow,
+# `index.js` is the code that will run.
+# For our project, we generate this file through a build process
+# from other source files.
+# We need to make sure the checked-in `index.js` actually matches what we expect it to be.
+name: Check dist
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.*'
+  pull_request:
+    paths-ignore:
+      - '**.*'
+  workflow_dispatch:
+
+jobs:
+  check-dist:
+    runs-on:*****
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set servers*
+        uses: actions
+        with:
+          node-version:*
+
+      - name: 
+        run: 
+
+      - name: Rebuild the file
+        run:
+
+      - name: Compare the expected and actual dist/ directories
+        run: |
+          if [ "$(**)
+          fi
+
+      # If dist/ was different than expected, upload the expected version as an artifact
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() && steps.diff.conclusion == 'failure' }}
+        with:
+          name: 
+          path: 
+
+      # If dist/ was different than expected, upload the expected version as an artifact
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() && steps.diff.conclusion == 'failure' }}
+        with:
+          name: check
+          path: check build
