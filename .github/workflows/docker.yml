@@ -1,0 +1,51 @@
+name: Publish Docker Image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - scanner.py
+      - requirements.txt
+      - Dockerfile
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lowercase REPO
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+
+      # Login against a Docker registry
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          labels: org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
