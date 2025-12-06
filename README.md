@@ -26,6 +26,10 @@ The `--vercel-waf-bypass` flag uses an alternative payload variant specifically 
 
 The `--windows` flag switches the payload from Unix shell (`echo $((41*271))`) to PowerShell (`powershell -c "41*271"`) for targets running on Windows.
 
+### Docker Support
+
+You can use prebuilt Docker Image `ghcr.io/assetnote/react2shell-scanner` or build it locally with Dockerfile provided.
+
 ## Requirements
 
 - Python 3.9+
@@ -34,8 +38,24 @@ The `--windows` flag switches the payload from Unix shell (`echo $((41*271))`) t
 
 ## Installation
 
+### Regular
+
 ```
 pip install -r requirements.txt
+```
+
+### Docker
+
+#### Pull
+
+```shell
+docker pull ghcr.io/assetnote/react2shell-scanner
+```
+
+#### Or build
+
+```shell
+docker build -t react2shell-scanner:latest .
 ```
 
 ## Usage
@@ -81,6 +101,34 @@ Scan with WAF bypass:
 ```
 python3 scanner.py -u https://example.com --waf-bypass
 ```
+## Docker
+
+All the scripts above are available using the docker image. For example:
+
+Scan a single host:
+
+```shell
+docker run --rm ghcr.io/assetnote/react2shell-scanner -u https://example.com
+```
+
+### Bind mounts
+Working directory in Docker container is `/opt/react2shell`. Bind mount to this directory if you need to share files between container and Docker host. 
+
+Scan a list of hosts:
+
+```shell
+docker run --rm -v $PWD/hosts.txt:/opt/react2shell/hosts.txt:ro ghcr.io/assetnote/react2shell-scanner -l hosts.txt
+```
+
+Scan with multiple threads and save results:
+```shell
+touch results.json # create file before mount
+docker run --rm \
+  -v $PWD/results.json:/opt/react2shell/results.json \
+  -v $PWD/hosts.txt:/opt/react2shell/hosts.txt:ro \
+  ghcr.io/assetnote/react2shell-scanner -l hosts.txt -t 20 -o results.json
+```
+etc.
 
 ## Options
 
