@@ -90,6 +90,13 @@ python3 scanner.py -u https://example.com --path /_next --path /api
 python3 scanner.py -u https://example.com --path-file paths.txt
 ```
 
+Scan through a proxy:
+
+```
+python3 scanner.py -u https://example.com --proxy http://proxy.example.com:8080
+python3 scanner.py -l hosts.txt --proxy socks5://127.0.0.1:1080
+```
+
 ## Options
 
 ```
@@ -110,6 +117,7 @@ python3 scanner.py -u https://example.com --path-file paths.txt
 --waf-bypass-size Size of junk data in KB (default: 128)
 --path            Custom path to test (can be used multiple times)
 --path-file       File containing paths to test (one per line)
+--proxy           Proxy URL (e.g., http://proxy.example.com:8080 or socks5://proxy.example.com:1080)
 ```
 
 ## Credits
