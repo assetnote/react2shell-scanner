@@ -38,6 +38,12 @@ The `--windows` flag switches the payload from Unix shell (`echo $((41*271))`) t
 pip install -r requirements.txt
 ```
 
+## Docker installation
+```
+docker build -t  react2shell-scanner .
+docker container run --rm -ti react2shell-scanner:latest -v -u https://example.com
+```
+
 ## Usage
 
 Scan a single host:
