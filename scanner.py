@@ -14,6 +14,7 @@ Based on research from Assetnote Security Research Team.
 """
 
 import argparse
+
 import sys
 import json
 import os
