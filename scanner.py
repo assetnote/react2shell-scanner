@@ -325,7 +325,11 @@ def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True, f
     if paths:
         test_paths = paths
     else:
-        test_paths = ["/"]  # Default to root path
+        # Default behavior: Test root AND a random path.
+        # Why? Root (/) often redirects (307/308) causing False Negatives.
+        # A random path triggers the 404 RSC handler, forcing payload processing.
+        random_path = '/' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+        test_paths = ["/", random_path]
 
     if safe_check:
         body, content_type = build_safe_payload()
