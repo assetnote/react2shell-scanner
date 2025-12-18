@@ -1,4 +1,6 @@
 # react2shell-scanner
+delete this project.
+I don't allow this projects.
 
 A command-line tool for detecting CVE-2025-55182 and CVE-2025-66478 in Next.js applications using React Server Components.
 
