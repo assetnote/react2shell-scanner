@@ -325,7 +325,11 @@ def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True, f
     if paths:
         test_paths = paths
     else:
-        test_paths = ["/"]  # Default to root path
+        # Default behavior: Test root AND a random path.
+        # Why? Root (/) often redirects (307/308) causing False Negatives.
+        # A random path triggers the 404 RSC handler, forcing payload processing.
+        random_path = '/' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+        test_paths = ["/", random_path]
 
     if safe_check:
         body, content_type = build_safe_payload()
@@ -403,29 +407,38 @@ def check_vulnerability(host: str, timeout: int = 10, verify_ssl: bool = True, f
             result["vulnerable"] = True
             return result
 
-        # Path not vulnerable - try redirect path if enabled
-        if follow_redirects:
+# Path not vulnerable - try redirect path if enabled
+        # FIX: Use the redirection from the POST response directly.
+        # calling resolve_redirects() sends a HEAD request, which often receives 
+        # a 200 OK on Next.js/RSC apps instead of the 307/303 triggered by POST.
+        if follow_redirects and response.status_code in [301, 302, 303, 307, 308]:
             try:
-                redirect_url = resolve_redirects(test_url, timeout, verify_ssl)
-                if redirect_url != test_url:
-                    # Different path, test it
-                    response, error = send_payload(redirect_url, headers, body, timeout, verify_ssl)
+                location = response.headers.get("Location")
+                if location:
+                    # Handle relative redirects
+                    if location.startswith("/"):
+                        parsed_host = urlparse(host)
+                        redirect_url = f"{parsed_host.scheme}://{parsed_host.netloc}{location}"
+                    else:
+                        redirect_url = location
+                    
+                    # Verify we stay on host and it's a new URL
+                    if urlparse(redirect_url).netloc == urlparse(host).netloc and redirect_url != test_url:
+                        # Different path, test it
+                        response, error = send_payload(redirect_url, headers, body, timeout, verify_ssl)
 
-                    if error:
-                        # Continue to next path
-                        continue
+                        if not error:
+                            result["final_url"] = redirect_url
+                            result["request"] = build_request_str(redirect_url)
+                            result["status_code"] = response.status_code
+                            result["response"] = build_response_str(response)
 
-                    result["final_url"] = redirect_url
-                    result["request"] = build_request_str(redirect_url)
-                    result["status_code"] = response.status_code
-                    result["response"] = build_response_str(response)
-
-                    if is_vulnerable(response):
-                        result["vulnerable"] = True
-                        return result
+                            if is_vulnerable(response):
+                                result["vulnerable"] = True
+                                return result
             except Exception:
-                pass  # Continue to next path if redirect resolution fails
-
+                pass
+    
     # All paths tested, not vulnerable
     result["vulnerable"] = False
     return result
